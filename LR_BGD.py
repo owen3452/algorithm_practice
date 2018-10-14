@@ -52,10 +52,10 @@ for l in range(2000):
     w = w + gradient_eg*alpha
     lost_value = lost_func(samples, w)
     print (w, '/n', lost_value)
-"""
+'''
 lost_value 最小
 [ -5.61764839   9.05269005 -15.62154972] /n 143.00137622885316
-"""
+'''
 
 # 验证得到的最优的参数
 from sklearn.linear_model import LogisticRegression
@@ -63,6 +63,6 @@ from sklearn.linear_model import LogisticRegression
 clf = LogisticRegression(fit_intercept=True, C = 1e15)
 clf.fit(samples[:,:-1], samples[:,-1])
 print(clf.coef_,clf.intercept_,)
-"""
+'''
 [[-5.02712589  8.23286817]] [-13.99400825]
-"""
+'''
