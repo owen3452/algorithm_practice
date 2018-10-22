@@ -7,6 +7,15 @@ def list_distinct(list):
     l = collections.Counter(list)
     return sorted(l.keys(), reverse=True)
 
+import numpy as np
+import matplotlib.pyplot as plt
+import collections
+
+def list_distinct(list):
+    #list 去重 降序
+    l = collections.Counter(list)
+    return sorted(l.keys(), reverse=True)
+
 class DecisionTree(object):
     """
     type: distrete, continuous
@@ -18,7 +27,7 @@ class DecisionTree(object):
     """
 
     def __init__(self, type='distrete', criterion='gini', splitter='best', min_impurity_decrease=0.0,
-                 min_impurity_split=0.0, min_samples_split=None):
+                 min_impurity_split=0.0, min_samples_split=1.0):
         self._type = type
         self._criterion = criterion
         self._splitter = splitter
@@ -35,11 +44,10 @@ class DecisionTree(object):
         impurity 该节点的impurity
         is_leaf 是否是叶子节点 是的话存储分类信息
         cate_dic 存储分裂后的类
-
         """
 
         def __init__(self, has_calc_col=[], impurity=None, features=None, labels=None, best_feature=None,
-                    next_impurity=None, is_leaf=None, **kwargs):
+                    next_impurity=None, is_leaf=None, nodes_data=[], next_node={}):
             self.has_calc_col = has_calc_col
             self.impurity = impurity
             self.features = features
@@ -47,7 +55,8 @@ class DecisionTree(object):
             self.best_feature = best_feature
             self.next_impurity = next_impurity
             self.is_leaf = is_leaf
-            self.next_node = kwargs
+            self.nodes_data = nodes_data
+            self.next_node = next_node
 
     def gini(self, y: list):
         """
@@ -135,19 +144,22 @@ class DecisionTree(object):
         # {feaure: {impurity: {feaure_vlue1: [data], feaure_vlue2: [data], ...}}}
         if self._type == 'distrete':
             for key in wait_col:
-                col_new = list(map(lambda x: '=' + str(x) , X[key]))
+                col_new = list(map(lambda x: '==' + str(x) , X[key]))
                 impurity_dic[key].update(cond_loss(col_new, y))
-                print(impurity_dic)
         # 连续值
         elif self._type == 'continuous':
             for key in wait_col:
                 l = list_distinct(X[key])
                 temp_impurity = collections.defaultdict(dict)
                 # {impurity: {feaure_vlue: data}} 选最小的
-                for i in range(len(l) - 1):
-                    mid_n = (l[i] + l[i + 1])*1.0 / 2
-                    col_new = list(map(lambda x: '>=' + str(mid_n) if x > mid_n else '<=' + str(mid_n), X[key]))
-                    temp_impurity.update(cond_loss(col_new, y))
+                if len(l) > 1:
+                    for i in range(len(l) - 1):
+                        mid_n = (l[i] + l[i + 1])*1.0 / 2
+                        col_new = list(map(lambda x: '>=' + str(mid_n) if x > mid_n else '<=' + str(mid_n), X[key]))
+                        temp_impurity.update(cond_loss(col_new, y))
+                else:
+                    col_new = list(map(lambda x: '==' + str(x), X[key]))
+                    temp_impurity.update(cond_loss(X[key],y))
                 temp_best_feature = sorted(temp_impurity.items(), key=lambda x: x[0])[0]
                 impurity_dic[key] = {temp_best_feature[0]: temp_best_feature[1]}
         impurity_dic = sorted(impurity_dic.items(), key=lambda x: x[1].keys())[0]
@@ -171,7 +183,7 @@ class DecisionTree(object):
             X_out[i] = dic_temp
         return impurity, best_feature, float(list(next_impurity)[0]), X_out, y_out
 
-    def is_leaf_node2(self, tree_node):
+    def is_leaf_node(self, tree_node):
         """
         是否是叶子节点
         """
@@ -181,8 +193,9 @@ class DecisionTree(object):
             # 样本已分净
             result = list_distinct(tree_node.labels)[0]
         elif tree_node.impurity <= self._min_impurity_split \
+             or len(tree_node.features.keys())==len(tree_node.has_calc_col) \
              or tree_node.impurity - tree_node.next_impurity <= self._min_impurity_split \
-             or len(tree_node.labels) <= (n if n > 1 else n * self._all_data_cnt):
+             or len(tree_node.labels) <= (n if n >= 1 else n * self._all_data_cnt):
             # 达到三种阈值
             result = sorted(collections.Counter(tree_node.labels).items(), key=lambda x: x[1], reverse=True)[0][0]
         return result
@@ -191,43 +204,41 @@ class DecisionTree(object):
         """
         建立递归决策树
         """
-        # 根据features和labels将TreeNode补齐
-        print(tree_node.features,
-              tree_node.labels,
-              tree_node.has_calc_col)
-        if len(tree_node.features.keys())==len(tree_node.has_calc_col):
-            tree_node.is_leaf = sorted(collections.Counter(tree_node.labels).items(), key=lambda x: x[1], reverse=True)[0][0]
-            return tree_node
-        (impurity, best_feature, next_impurity, X, y) = \
-            self.choose_best_feature(tree_node.features, tree_node.labels, tree_node.has_calc_col)
-        tree_node.impurity = impurity
-        tree_node.best_feature = best_feature
-        tree_node.next_impurity = next_impurity
-        tree_node.has_calc_col.append(best_feature)
-        tree_node.is_leaf = self.is_leaf_node2(tree_node)
-        print(tree_node.is_leaf)
+        print(tree_node.nodes_data,
+              tree_node.has_calc_col,
+              tree_node.is_leaf )
         # 判断是否跳出递归
         if tree_node.is_leaf != None:
-            return tree_node
+                return 
         # 未跳出
-        for i in y.keys():
-            temp_tree = self.TreeNode(has_calc_col=tree_node.has_calc_col, features=X[i], labels=y[i])
-            tree_node.next_node.update({i: self.build_tree(temp_tree)})
-            print(tree_node.next_node)
+        for i in tree_node.nodes_data[1].keys():
+            (impurity, best_feature, next_impurity, features, labels) = \
+            self.choose_best_feature(tree_node.nodes_data[0][i], tree_node.nodes_data[1][i], tree_node.has_calc_col)
+            temp_tree = self.TreeNode(tree_node.has_calc_col+[best_feature], impurity, tree_node.nodes_data[0][i],
+                                      tree_node.nodes_data[1][i], best_feature, next_impurity, None, [features, labels])
+            temp_tree.is_leaf = self.is_leaf_node(temp_tree)
+            tree_node.next_node.update({i: temp_tree})
+            self.build_tree(temp_tree)
 
     def fit(self, X, y):
         self._all_data_cnt = len(y)
-        self._root_node = self.TreeNode(features=X, labels=y)
-        self._tree_node = self.build_tree(self._root_node)
+        #self._root_node = self.TreeNode(features=X, labels=y)
+        (impurity, best_feature, next_impurity, features, labels) = \
+            self.choose_best_feature(X, y, [])
+        self._tree_node = self.TreeNode([best_feature], impurity, X, y, best_feature, next_impurity,\
+                                        None, [features, labels])
+        self._tree_node.is_leaf = self.is_leaf_node(self._tree_node)
+        self.build_tree(self._tree_node)
 
     def predict(self, X, tree_node=None):
         if tree_node==None:
             tree_node = self._tree_node
-        if tree_node.is_leaf:
+        if tree_node.is_leaf!=None:
             return tree_node.is_leaf
         for condition in tree_node.next_node:
             if eval(str(X[tree_node.best_feature]) + condition.keys()):
                 self.predict(X, condition.values())
+
 
 
 """
@@ -238,8 +249,8 @@ from sklearn.datasets import load_iris
 import pandas as pd
 
 iris = load_iris()
-print(iris.feature_names)  # ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)']
-print(iris.target_names) #['setosa' 'versicolor' 'virginica']
+#print(iris.feature_names)  # ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)']
+#print(iris.target_names) #['setosa' 'versicolor' 'virginica']
 #print(iris.data)
 #print(iris.target)
 df_feature = pd.DataFrame(iris.data, columns=['sepal_length', 'sepal_width', 'petal_length', 'petal_width'])
@@ -250,7 +261,45 @@ df
 
 test = DecisionTree(type='continuous')
 #test.entropy_condition([1,1,0,0], [1,0,0,0])
-col = df.columns
-X = df[col[:4]].to_dict(orient= 'list')
-y = list(df[col[4:]].to_dict(orient= 'list').values())[0]
+X = df.iloc[0:98,0:4].to_dict(orient= 'list')
+y = list(df.iloc[0:98,[4]].to_dict(orient= 'list').values())[0]
+
+X_test = df.iloc[[99],0:4].to_dict(orient= 'list')
+y_result = list(df.iloc[[99],[4]].to_dict(orient= 'list').values())[0]
+
 test.fit(X,y)
+#test.predict(X_test)
+test._tree_node
+
+##画图
+from graphviz import Digraph
+
+dot = Digraph(comment='The Test Table', format="png")
+def scan_class(name, tree):   
+    dot.node(name, str(tree.features +
+                    tree.labels +
+                    tree.has_calc_col +
+                    tree.impurity +
+                    tree.best_feature +
+                    #tree.next_impurity +
+                    tree.is_leaf ) )
+    if tree.next_node==None:
+        return
+    for i in tree.next_node.keys():       
+        scan_class(i, tree.next_node[i])
+        dot.edge(name, i, constraint='false')
+ 
+scan_class('init', test._tree_node）
+“”“
+# 保存source到文件，并提供Graphviz引擎
+dot.save('test-table.gv')  # 保存
+dot.render('test-table.gv')
+# dot.view()  # 显示
+# 从保存的文件读取并显示
+from graphviz import Source
+
+s = Source.from_file('test-table.gv')
+print(s.source)  # 打印代码
+# s.view()  # 显示
+”“”
+      
