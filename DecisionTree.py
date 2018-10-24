@@ -7,15 +7,6 @@ def list_distinct(list):
     l = collections.Counter(list)
     return sorted(l.keys(), reverse=True)
 
-import numpy as np
-import matplotlib.pyplot as plt
-import collections
-
-def list_distinct(list):
-    #list 去重 降序
-    l = collections.Counter(list)
-    return sorted(l.keys(), reverse=True)
-
 class DecisionTree(object):
     """
     type: distrete, continuous
@@ -46,8 +37,8 @@ class DecisionTree(object):
         cate_dic 存储分裂后的类
         """
 
-        def __init__(self, has_calc_col=[], impurity=None, features=None, labels=None, best_feature=None,
-                    next_impurity=None, is_leaf=None, nodes_data=[], next_node={}):
+        def __init__(self, has_calc_col=[], features=None, labels=None, impurity=None, best_feature=None,
+                    next_impurity=None, is_leaf=None, nodes_data=[], next_node=None):
             self.has_calc_col = has_calc_col
             self.impurity = impurity
             self.features = features
@@ -139,49 +130,52 @@ class DecisionTree(object):
             cond_loss = self.entropy_condition
         else:
             raise Exception("Wrong Value: criterion")
-        # 离散值
-        impurity_dic = collections.defaultdict(dict)
-        # {feaure: {impurity: {feaure_vlue1: [data], feaure_vlue2: [data], ...}}}
-        if self._type == 'distrete':
-            for key in wait_col:
-                col_new = list(map(lambda x: '==' + str(x) , X[key]))
-                impurity_dic[key].update(cond_loss(col_new, y))
-        # 连续值
-        elif self._type == 'continuous':
-            for key in wait_col:
-                l = list_distinct(X[key])
-                temp_impurity = collections.defaultdict(dict)
-                # {impurity: {feaure_vlue: data}} 选最小的
-                if len(l) > 1:
-                    for i in range(len(l) - 1):
-                        mid_n = (l[i] + l[i + 1])*1.0 / 2
-                        col_new = list(map(lambda x: '>=' + str(mid_n) if x > mid_n else '<=' + str(mid_n), X[key]))
-                        temp_impurity.update(cond_loss(col_new, y))
-                else:
-                    col_new = list(map(lambda x: '==' + str(x), X[key]))
-                    temp_impurity.update(cond_loss(X[key],y))
-                temp_best_feature = sorted(temp_impurity.items(), key=lambda x: x[0])[0]
-                impurity_dic[key] = {temp_best_feature[0]: temp_best_feature[1]}
-        impurity_dic = sorted(impurity_dic.items(), key=lambda x: x[1].keys())[0]
-        # 处理输出值
-        impurity = loss(y)
-        best_feature = impurity_dic[0]
-        next_impurity = impurity_dic[1].keys()
-        # 输出分裂后数据集
-        feature_index = list(impurity_dic[1].values())[0]
-        #impurity_dic[1].values() 后面报错 'dict_values' object has no attribute 'values'
-        # y_out: {feature_vlue1: [y]}
-        y_out = collections.defaultdict(list)
-        for i in feature_index.keys():
-            y_out[i] = list(map(lambda n: y[n], feature_index[i]))
-        # X_out: {feature_vlue1: feature1:[x1], feature2:[x2]}
-        X_out = collections.defaultdict(dict)
-        for i in feature_index.keys():
-            dic_temp = {}
-            for j in X.keys():
-                dic_temp.update({j: list(map(lambda n: X[j][n], feature_index[i]))})
-            X_out[i] = dic_temp
-        return impurity, best_feature, float(list(next_impurity)[0]), X_out, y_out
+        if len(wait_col):
+            # 离散值
+            impurity_dic = collections.defaultdict(dict)
+            # {feaure: {impurity: {feaure_vlue1: [data], feaure_vlue2: [data], ...}}}
+            if self._type == 'distrete':
+                for key in wait_col:
+                    col_new = list(map(lambda x: '==' + str(x) , X[key]))
+                    impurity_dic[key].update(cond_loss(col_new, y))
+            # 连续值
+            elif self._type == 'continuous':
+                for key in wait_col:
+                    l = list_distinct(X[key])
+                    temp_impurity = collections.defaultdict(dict)
+                    # {impurity: {feaure_vlue: data}} 选最小的
+                    if len(l) > 1:
+                        for i in range(len(l) - 1):
+                            mid_n = (l[i] + l[i + 1])*1.0 / 2
+                            col_new = list(map(lambda x: '>=' + str(mid_n) if x > mid_n else '<=' + str(mid_n), X[key]))
+                            temp_impurity.update(cond_loss(col_new, y))
+                    else:
+                        col_new = list(map(lambda x: '==' + str(x), X[key]))
+                        temp_impurity.update(cond_loss(X[key],y))
+                    temp_best_feature = sorted(temp_impurity.items(), key=lambda x: x[0])[0]
+                    impurity_dic[key] = {temp_best_feature[0]: temp_best_feature[1]}
+            impurity_dic = sorted(impurity_dic.items(), key=lambda x: x[1].keys())[0]
+            # 处理输出值
+            impurity = loss(y)
+            best_feature = impurity_dic[0]
+            next_impurity = impurity_dic[1].keys()
+            # 输出分裂后数据集
+            feature_index = list(impurity_dic[1].values())[0]
+            #impurity_dic[1].values() 后面报错 'dict_values' object has no attribute 'values'
+            # y_out: {feature_vlue1: [y]}
+            y_out = collections.defaultdict(list)
+            for i in feature_index.keys():
+                y_out[i] = list(map(lambda n: y[n], feature_index[i]))
+            # X_out: {feature_vlue1: feature1:[x1], feature2:[x2]}
+            X_out = collections.defaultdict(dict)
+            for i in feature_index.keys():
+                dic_temp = {}
+                for j in X.keys():
+                    dic_temp.update({j: list(map(lambda n: X[j][n], feature_index[i]))})
+                X_out[i] = dic_temp
+            return impurity, best_feature, float(list(next_impurity)[0]), X_out, y_out
+        else:
+            return None, None, None, None, None
 
     def is_leaf_node(self, tree_node):
         """
@@ -192,8 +186,8 @@ class DecisionTree(object):
         if len(list_distinct(tree_node.labels)) == 1:
             # 样本已分净
             result = list_distinct(tree_node.labels)[0]
-        elif tree_node.impurity <= self._min_impurity_split \
-             or len(tree_node.features.keys())==len(tree_node.has_calc_col) \
+        elif len(tree_node.features.keys())==len(tree_node.has_calc_col) \
+             or tree_node.impurity <= self._min_impurity_split  \
              or tree_node.impurity - tree_node.next_impurity <= self._min_impurity_split \
              or len(tree_node.labels) <= (n if n >= 1 else n * self._all_data_cnt):
             # 达到三种阈值
@@ -204,29 +198,36 @@ class DecisionTree(object):
         """
         建立递归决策树
         """
-        print(tree_node.nodes_data,
-              tree_node.has_calc_col,
-              tree_node.is_leaf )
+#         print(tree_node,'\n',
+#               tree_node.has_calc_col,'\n',
+#               tree_node.best_feature,'\n',
+#               tree_node.is_leaf,'\n')
         # 判断是否跳出递归
-        if tree_node.is_leaf != None:
-                return 
-        # 未跳出
-        for i in tree_node.nodes_data[1].keys():
-            (impurity, best_feature, next_impurity, features, labels) = \
-            self.choose_best_feature(tree_node.nodes_data[0][i], tree_node.nodes_data[1][i], tree_node.has_calc_col)
-            temp_tree = self.TreeNode(tree_node.has_calc_col+[best_feature], impurity, tree_node.nodes_data[0][i],
-                                      tree_node.nodes_data[1][i], best_feature, next_impurity, None, [features, labels])
-            temp_tree.is_leaf = self.is_leaf_node(temp_tree)
-            tree_node.next_node.update({i: temp_tree})
-            self.build_tree(temp_tree)
+        if tree_node.is_leaf is None:
+            for i in tree_node.nodes_data[0].keys():
+                (impurity, best_feature, next_impurity, features, labels) = \
+                self.choose_best_feature(tree_node.nodes_data[0][i], tree_node.nodes_data[1][i], tree_node.has_calc_col+[tree_node.best_feature])
+                temp_tree = self.TreeNode(tree_node.has_calc_col+[tree_node.best_feature], \
+                                          tree_node.nodes_data[0][i], tree_node.nodes_data[1][i], \
+                                          impurity,  best_feature, next_impurity, None, [features, labels], {})
+                temp_tree.is_leaf = self.is_leaf_node(temp_tree)
+                tree_node.next_node.update({i: temp_tree})
+#                 print(tree_node,'\n',
+#                       tree_node.next_node,'\n',
+#                       '------------------','\n',
+#                       temp_tree,'\n',
+#                       temp_tree.has_calc_col,'\n',
+#                       temp_tree.best_feature,'\n',
+#                       temp_tree.is_leaf,'\n')
+                self.build_tree(temp_tree)
 
     def fit(self, X, y):
         self._all_data_cnt = len(y)
         #self._root_node = self.TreeNode(features=X, labels=y)
         (impurity, best_feature, next_impurity, features, labels) = \
             self.choose_best_feature(X, y, [])
-        self._tree_node = self.TreeNode([best_feature], impurity, X, y, best_feature, next_impurity,\
-                                        None, [features, labels])
+        self._tree_node = self.TreeNode([], X, y, impurity, best_feature, next_impurity,\
+                                        None, [features, labels], {})
         self._tree_node.is_leaf = self.is_leaf_node(self._tree_node)
         self.build_tree(self._tree_node)
 
@@ -235,9 +236,12 @@ class DecisionTree(object):
             tree_node = self._tree_node
         if tree_node.is_leaf!=None:
             return tree_node.is_leaf
-        for condition in tree_node.next_node:
-            if eval(str(X[tree_node.best_feature]) + condition.keys()):
-                self.predict(X, condition.values())
+        else:
+            for condition in tree_node.next_node.keys():
+                if eval(str(X[tree_node.best_feature][0]) + condition):
+#                     print(tree_node.best_feature, str(X[tree_node.best_feature][0]) + condition)
+                    return self.predict(X, tree_node.next_node[condition])
+
 
 
 
