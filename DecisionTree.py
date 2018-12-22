@@ -293,17 +293,12 @@ def scan_class(name, tree):
         scan_class(i, tree.next_node[i])
         dot.edge(name, i, constraint='false')
  
-scan_class('init', test._tree_node）
-“”“
-# 保存source到文件，并提供Graphviz引擎
-dot.save('test-table.gv')  # 保存
-dot.render('test-table.gv')
-# dot.view()  # 显示
-# 从保存的文件读取并显示
-from graphviz import Source
+scan_class('init', test._tree_node)
 
-s = Source.from_file('test-table.gv')
-print(s.source)  # 打印代码
-# s.view()  # 显示
-”“”
+# 保存source到文件，并提供Graphviz引擎
+dot.save('test-table.gv')
+dot.render('test-table.gv')
+dot.view()
+
+
       

@@ -1,12 +1,11 @@
 import numpy as np
-import math
 import matplotlib.pyplot as plt
-%matplotlib inline
+#%matplotlib inline
 
 #LR概率函数 w:(w,b), features:(features vector,1)
 def sigmoid_func(features, w):
     z = np.dot(w.T, features)*(-1)
-    value = 1/(1 + np.e**(np.dot(w.T, features)*(-1)))
+    value = 1/(1 + np.e**(z))
     return value
     
 #损失函数
