@@ -245,60 +245,60 @@ class DecisionTree(object):
 
 
 
-"""
-#测试
-"""
-
-from sklearn.datasets import load_iris
-import pandas as pd
-
-iris = load_iris()
-#print(iris.feature_names)  # ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)']
-#print(iris.target_names) #['setosa' 'versicolor' 'virginica']
-#print(iris.data)
-#print(iris.target)
-df_feature = pd.DataFrame(iris.data, columns=['sepal_length', 'sepal_width', 'petal_length', 'petal_width'])
-df_label = pd.DataFrame(iris.target, columns=['label'])
-df = pd.concat([df_feature, df_label], axis=1)
-df = df[df['label'] <= 1]
-df
-
-test = DecisionTree(type='continuous')
-#test.entropy_condition([1,1,0,0], [1,0,0,0])
-X = df.iloc[0:98,0:4].to_dict(orient= 'list')
-y = list(df.iloc[0:98,[4]].to_dict(orient= 'list').values())[0]
-
-X_test = df.iloc[[99],0:4].to_dict(orient= 'list')
-y_result = list(df.iloc[[99],[4]].to_dict(orient= 'list').values())[0]
-
-test.fit(X,y)
-#test.predict(X_test)
-test._tree_node
-
-##画图
-from graphviz import Digraph
-
-dot = Digraph(comment='The Test Table', format="png")
-def scan_class(name, tree):   
-    dot.node(name, str(tree.features +
-                    tree.labels +
-                    tree.has_calc_col +
-                    tree.impurity +
-                    tree.best_feature +
-                    #tree.next_impurity +
-                    tree.is_leaf ) )
-    if tree.next_node==None:
-        return
-    for i in tree.next_node.keys():       
-        scan_class(i, tree.next_node[i])
-        dot.edge(name, i, constraint='false')
- 
-scan_class('init', test._tree_node)
-
-# 保存source到文件，并提供Graphviz引擎
-dot.save('test-table.gv')
-dot.render('test-table.gv')
-dot.view()
+# """
+# #测试
+# """
+#
+# from sklearn.datasets import load_iris
+# import pandas as pd
+#
+# iris = load_iris()
+# #print(iris.feature_names)  # ['sepal length (cm)', 'sepal width (cm)', 'petal length (cm)', 'petal width (cm)']
+# #print(iris.target_names) #['setosa' 'versicolor' 'virginica']
+# #print(iris.data)
+# #print(iris.target)
+# df_feature = pd.DataFrame(iris.data, columns=['sepal_length', 'sepal_width', 'petal_length', 'petal_width'])
+# df_label = pd.DataFrame(iris.target, columns=['label'])
+# df = pd.concat([df_feature, df_label], axis=1)
+# df = df[df['label'] <= 1]
+# df
+#
+# test = DecisionTree(type='continuous')
+# #test.entropy_condition([1,1,0,0], [1,0,0,0])
+# X = df.iloc[0:98,0:4].to_dict(orient= 'list')
+# y = list(df.iloc[0:98,[4]].to_dict(orient= 'list').values())[0]
+#
+# X_test = df.iloc[[99],0:4].to_dict(orient= 'list')
+# y_result = list(df.iloc[[99],[4]].to_dict(orient= 'list').values())[0]
+#
+# test.fit(X,y)
+# #test.predict(X_test)
+# test._tree_node
+#
+# ##画图
+# from graphviz import Digraph
+#
+# dot = Digraph(comment='The Test Table', format="png")
+# def scan_class(name, tree):
+#     dot.node(name, str(tree.features +
+#                     tree.labels +
+#                     tree.has_calc_col +
+#                     tree.impurity +
+#                     tree.best_feature +
+#                     #tree.next_impurity +
+#                     tree.is_leaf ) )
+#     if tree.next_node==None:
+#         return
+#     for i in tree.next_node.keys():
+#         scan_class(i, tree.next_node[i])
+#         dot.edge(name, i, constraint='false')
+#
+# scan_class('init', test._tree_node)
+#
+# # 保存source到文件，并提供Graphviz引擎
+# dot.save('test-table.gv')
+# dot.render('test-table.gv')
+# dot.view()
 
 
       
