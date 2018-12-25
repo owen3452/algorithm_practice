@@ -4,7 +4,7 @@
 # @email    : zhendch@qq.com
 
 import numpy as np
-from scipy import stats,optimize
+from scipy import stats
 
 class naive_bayes(object):
     '''
@@ -15,20 +15,18 @@ class naive_bayes(object):
         self._feature_type = feature_type
         self._distribution = distribution
 
-    def gaussian(self, x, sigma, u):
-        y = np.exp(-(x - u) ** 2 / (2 * sigma ** 2)) / (sigma * np.sqrt(2 * np.pi))
-        return y
-
-    def exponential(self, x, a, b, c):
-        return a * np.exp(-b * x) + c
-
     def handle_gaussian(self, X, x):
+        # 很多博客反馈scipy的fit不准，待改进
         u, sigma = stats.norm.fit(X)
-        return self.gaussian(self, x, sigma, u)
+        return stats.norm.pdf(self, x, u, sigma)
 
     def handle_exponential(self, X, x):
-        popt, pcov = optimize.curve_fit(self.exponential, xdata, ydata)
-        return self.gaussian(self, x, sigma, u)
+        # 很多博客反馈scipy的fit不准，待改进
+        loc, scale = stats.expon.fit(X)
+        return stats.expon(self, x, loc, scale)
+
+    def fit(self, X, y):
+
 
 
 
