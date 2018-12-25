@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Author  : zhen
+# @email    : zhendch@qq.com
+
 import numpy as np
 import matplotlib.pyplot as plt
 import collections
