@@ -71,23 +71,23 @@ class LogisticRegression(object):
         m, n = np.shape(X)
         w = np.random.randn(n)
         lost = []
-        lost.append(self.lost_func(self, X, y, w))
+        lost.append(self.lost_func(X, y, w))
         for i in range(self._max_iter):
             if self._solver=='bgd':
-                gradient_eg = self.gradient_bgd(self, X, y, w)
+                gradient_eg = self.gradient_bgd(X, y, w)
                 w += gradient_eg * self._learning_rate
-                lost.append(self.lost_func(self, X, y, w))
+                lost.append(self.lost_func(X, y, w))
             elif self._solver=='sgd':
                 rand = random.randint(0, m-1)
-                gradient_eg = self.gradient_bgd(self, X[rand], y[rand], w)
+                gradient_eg = self.gradient_bgd(X[rand], y[rand], w)
                 w += gradient_eg * self._learning_rate
-                lost.append(self.lost_func(self, X, y, w))
+                lost.append(self.lost_func(X, y, w))
             if lost[i+1] - lost[i] <= self._tol:
                 break
         self._w = w
 
     def predict_prob(self, X):
-        return map(lambda x: self.sigmoid_func(self, x, self._w), X)
+        return map(lambda x: self.sigmoid_func(x, self._w), X)
 
 
 # #构造数据samples 0：均值[0,0] 二维正态分布数据 1：均值[1,4] 二维正态分布数据
