@@ -115,14 +115,14 @@ class naive_bayes(object):
 # x1 = np.random.multivariate_normal([0, 0], [[1, .75],[.75, 1]], num_observations)
 # x2 = np.random.multivariate_normal([1, 4], [[1, .75],[.75, 1]], num_observations)
 #
-# simulated_separableish_features = np.vstack((x1, x2)).astype(np.float32)
-# simulated_labels = np.hstack((np.zeros(num_observations),
+# features = np.vstack((x1, x2)).astype(np.float32)
+# labels = np.hstack((np.zeros(num_observations),
 #                               np.ones(num_observations)))
 #
 # model = naive_bayes(feature_type='continuous', distribution='Gaussian')
-# model.fit(simulated_separableish_features[:8000], simulated_labels[:8000])
+# model.fit(features[:8000], labels[:8000])
 #
-# predict = model.predict_prob(simulated_separableish_features[8000:])
+# predict = model.predict_prob(features[8000:])
 #
 # predict_y = [1 if y.values()[0]<y.values()[1] else 0 for y in predict]
 # y = simulated_labels[8000:]
