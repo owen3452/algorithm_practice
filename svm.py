@@ -1,240 +1,179 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# @Author  : zhen
+# @email    : zhendch@qq.com
+
 import numpy as np
 
 
 class SVC(object):
     '''
     C: 正则化系数
-    kernel： 核函数（lin：线性核, rbf:高斯径向基函数)
+    kernel: 核函数（linear：线性核, rbf:高斯核) [Kernel, param]
     tol: 停止迭代的最小阈值
-    max_iter： max_iter
-
+    max_iter: max_iter
     '''
-    def __init__(self, C=1.0, kernel='rbf', tol=0.001, max_iter=-1):
+
+    def __init__(self, C=1.0, kernel=['rbf', 1], tol=0.001, max_iter=500):
         self._C = C
         self._kernel = kernel
         self._tol = tol
         self._max_iter = max_iter
 
-    def selectJrand(i, m):
-        # (0-m)选择一个随机数
-        j = i
-        while (j == i):
-            j = int(np.random.uniform(0, m))
-        return j
-
-    def clipAlpha(aj, H, L):
-        # 保证a在L和H范围内（L <= a <= H）
-        if aj > H:
-            aj = H
-        if L > aj:
-            aj = L
-        return aj
-
-    def kernelTrans(X, A, kTup):
-        # 核函数，输入参数,X:支持向量的特征树；A：某一行特征数据；kTup：('lin',k1)核函数的类型和参数
-        m, n = shape(X)
-        K = mat(zeros((m, 1)))
-        if kTup[0] == 'lin':  # 线性函数
-            K = X * A.T
-        elif kTup[0] == 'rbf':  # 径向基函数(radial bias function)
-            for j in range(m):
-                deltaRow = X[j, :] - A
-                K[j] = deltaRow * deltaRow.T
-            K = exp(K / (-1 * kTup[1] ** 2))  # 返回生成的结果
+    def kernel(self, x1, x2):
+        # 核函数 K(x1,x2)
+        x1 = np.mat(x1)
+        x2 = np.mat(x2)
+        if self._kernel[0] == 'linear':  # 线性函数
+            K = np.sum(x1 * x2.T)
+        elif self._kernel[0] == 'rbf':  # 高斯径向核
+            K = np.exp(np.sum((x1-x2) * (x1-x2).T, axis=1, keepdims=True) / (-1 * self._kernel[1] ** 2))
         else:
-            raise NameError('Houston We Have a Problem -- That Kernel is not recognized')
+            raise Exception("ValueError: Unexpected Parameter 'kernel")
         return K
 
+    def kernel_mat(self, X):
+        m = np.shape(X)[0]
+        kernel_matrix = np.mat(np.zeros((m, m)))
+        for i in range(m):
+            for j in range(m):
+                kernel_matrix[j, i] = self.kernel(X[j], X[i])
+        return kernel_matrix
 
-def loadDataSet(filename): #读取数据
-    dataMat=[]
-    labelMat=[]
-    fr=open(filename)
-    for line in fr.readlines():
-        lineArr=line.strip().split('\t')
-        dataMat.append([float(lineArr[0]),float(lineArr[1])])
-        labelMat.append(float(lineArr[2]))
-    return dataMat,labelMat #返回数据特征和数据类别
+    def cal_error(self, alpha_index_k):
+        self.b = 0
+        # 误差值的计算
+        predict_k = float(np.multiply(self.alphas, self.y).T * self.kernel_mat(self.X)[:, alpha_index_k] + self.b)
+        error_k = predict_k - float(self.y[alpha_index_k])
+        return error_k
 
-def selectJrand(i,m): #在0-m中随机选择一个不是i的整数
-    j=i
-    while (j==i):
-        j=int(random.uniform(0,m))
-    return j
+    def select_second_sample_j(self, alpha_index_i, error_i):
+        """选择第二个变量
+        :param alpha_index_i(float): 第一个变量alpha_i的index_i
+        :param error_i(float): E_i
+        :return:第二个变量alpha_j的index_j和误差值E_j
+        """
+        self.error_tmp[alpha_index_i] = [1, error_i]  # 用来标记已被优化
+        candidate_alpha_list = np.nonzero(self.error_tmp[:, 0].A)[0]  # 因为是列向量，列数[1]都为0，只需记录行数[0]
+        max_step, max_step, error_j = 0, 0, 0
 
-def clipAlpha(aj,H,L):  #保证a在L和H范围内（L <= a <= H）
-    if aj>H:
-        aj=H
-    if L>aj:
-        aj=L
-    return aj
+        if len(candidate_alpha_list) > 1:
+            for alpha_index_k in candidate_alpha_list:
+                if alpha_index_k == alpha_index_i:
+                    continue
+                error_k = self.cal_error(alpha_index_k)
+                if abs(error_k - error_i) > max_step:
+                    max_step = abs(error_k - error_i)
+                    alpha_index_j, error_j = alpha_index_k, error_k
+        else:  # 随机选择
+            alpha_index_j = alpha_index_i
+            while alpha_index_j == alpha_index_i:
+                alpha_index_j = np.random.randint(0, self.n_samples)
+            error_j = self.cal_error(alpha_index_j)
+        return alpha_index_j, error_j
 
-def kernelTrans(X, A, kTup): #核函数，输入参数,X:支持向量的特征树；A：某一行特征数据；kTup：('lin',k1)核函数的类型和参数
-    m,n = shape(X)
-    K = mat(zeros((m,1)))
-    if kTup[0]=='lin': #线性函数
-        K = X * A.T
-    elif kTup[0]=='rbf': # 径向基函数(radial bias function)
-        for j in range(m):
-            deltaRow = X[j,:] - A
-            K[j] = deltaRow*deltaRow.T
-        K = exp(K/(-1*kTup[1]**2)) #返回生成的结果
-    else:
-        raise NameError('Houston We Have a Problem -- That Kernel is not recognized')
-    return K
+    def update_error_tmp(self, alpha_index_k):
+        '''
+        重新计算误差值，并对其标记为已被优化
+        :param alpha_index_k: 要计算的变量α
+        :return: index为k的alpha新的误差
+        '''
+        error = self.cal_error(alpha_index_k)
+        self.error_tmp[alpha_index_k] = [1, error]
 
-
-#定义类，方便存储数据
-class optStruct:
-    def __init__(self,dataMatIn, classLabels, C, toler, kTup):  # 存储各类参数
-        self.X = dataMatIn  #数据特征
-        self.labelMat = classLabels #数据类别
-        self.C = C #软间隔参数C，参数越大，非线性拟合能力越强
-        self.tol = toler #停止阀值
-        self.m = shape(dataMatIn)[0] #数据行数
-        self.alphas = mat(zeros((self.m,1)))
-        self.b = 0 #初始设为0
-        self.eCache = mat(zeros((self.m,2))) #缓存
-        self.K = mat(zeros((self.m,self.m))) #核函数的计算结果
-        for i in range(self.m):
-            self.K[:,i] = kernelTrans(self.X, self.X[i,:], kTup)
-
-
-def calcEk(oS, k): #计算Ek（参考《统计学习方法》p127公式7.105）
-    fXk = float(multiply(oS.alphas,oS.labelMat).T*oS.K[:,k] + oS.b)
-    Ek = fXk - float(oS.labelMat[k])
-    return Ek
-
-#随机选取aj，并返回其E值
-def selectJ(i, oS, Ei):
-    maxK = -1
-    maxDeltaE = 0
-    Ej = 0
-    oS.eCache[i] = [1,Ei]
-    validEcacheList = nonzero(oS.eCache[:,0].A)[0]  #返回矩阵中的非零位置的行数
-    if (len(validEcacheList)) > 1:
-        for k in validEcacheList:
-            if k == i:
-                continue
-            Ek = calcEk(oS, k)
-            deltaE = abs(Ei - Ek)
-            if (deltaE > maxDeltaE): #返回步长最大的aj
-                maxK = k
-                maxDeltaE = deltaE
-                Ej = Ek
-        return maxK, Ej
-    else:
-        j = selectJrand(i, oS.m)
-        Ej = calcEk(oS, j)
-    return j, Ej
-
-
-def updateEk(oS, k): #更新os数据
-    Ek = calcEk(oS, k)
-    oS.eCache[k] = [1,Ek]
-
-#首先检验ai是否满足KKT条件，如果不满足，随机选择aj进行优化，更新ai,aj,b值
-def innerL(i, oS): #输入参数i和所有参数数据
-    Ei = calcEk(oS, i) #计算E值
-    if ((oS.labelMat[i]*Ei < -oS.tol) and (oS.alphas[i] < oS.C)) or ((oS.labelMat[i]*Ei > oS.tol) and (oS.alphas[i] > 0)): #检验这行数据是否符合KKT条件 参考《统计学习方法》p128公式7.111-113
-        j,Ej = selectJ(i, oS, Ei) #随机选取aj，并返回其E值
-        alphaIold = oS.alphas[i].copy()
-        alphaJold = oS.alphas[j].copy()
-        if (oS.labelMat[i] != oS.labelMat[j]): #以下代码的公式参考《统计学习方法》p126
-            L = max(0, oS.alphas[j] - oS.alphas[i])
-            H = min(oS.C, oS.C + oS.alphas[j] - oS.alphas[i])
+    def choose_and_update(self, alpha_index_i):
+        # 判断和选择两个alpha进行更新
+        error_i = self.cal_error(alpha_index_i)  # 计算第一个样本的E_i
+        if (self.y[alpha_index_i] * error_i < -self._tol) and (self.alphas[alpha_index_i] < self._C) \
+                or (self.y[alpha_index_i] * error_i > self._tol) and (self.alphas[alpha_index_i] > 0):
+            # 1.选择第二个变量
+            alpha_index_j, error_j = self.select_second_sample_j(alpha_index_i, error_i)
+            alpha_i_old = self.alphas[alpha_index_i].copy()
+            alpha_j_old = self.alphas[alpha_index_j].copy()
+            # 2.计算上下界
+            if self.y[alpha_index_i] != self.y[alpha_index_j]:
+                L = max(0, self.alphas[alpha_index_j] - self.alphas[alpha_index_i])
+                H = min(self._C, self._C + self.alphas[alpha_index_j] - self.alphas[alpha_index_i])
+            else:
+                L = max(0, self.alphas[alpha_index_j] + self.alphas[alpha_index_i] - self.C)
+                H = min(self._C, self.alphas[alpha_index_j] + self.alphas[alpha_index_i])
+            if L == H:
+                return 0
+            # 3.计算eta
+            eta = self.kernel_mat[alpha_index_i, alpha_index_i] + self.kernel_mat[
+                alpha_index_j, alpha_index_j] - 2.0 * self.kernel_mat[alpha_index_i, alpha_index_j]
+            if eta <= 0:  # 因为这个eta>=0
+                return 0
+            # 4.更新alpha_j
+            self.alphas[alpha_index_j] += self.y[alpha_index_j] * (error_i - error_j) / eta
+            # 5.根据范围确实最终的j
+            if self.alphas[alpha_index_j] > H:
+                self.alphas[alpha_index_j] = H
+            if self.alphas[alpha_index_j] < L:
+                self.alphas[alpha_index_j] = L
+            # 6.判断是否结束
+            if abs(alpha_j_old - self.alphas[alpha_index_j]) < 0.00001:
+                self.update_error_tmp(alpha_index_j)
+                return 0
+            # 7.更新alpha_i
+            self.alphas[alpha_index_i] += self.train_y[alpha_index_i] * self.train_y[alpha_index_j] * (
+                    alpha_j_old - self.alphas[alpha_index_j])
+            # 8.更新b
+            b1 = self.b - error_i - self.train_y[alpha_index_i] * self.kernel_mat[alpha_index_i, alpha_index_i] * (
+                    self.alphas[alpha_index_i] - alpha_i_old) \
+                 - self.y[alpha_index_j] * self.kernel_mat[alpha_index_i, alpha_index_j] * (
+                         self.alphas[alpha_index_j] - alpha_j_old)
+            b2 = self.b - error_j - self.train_y[alpha_index_i] * self.kernel_mat[alpha_index_i, alpha_index_j] * (
+                    self.alphas[alpha_index_i] - alpha_i_old) \
+                 - self.y[alpha_index_j] * self.kernel_mat[alpha_index_j, alpha_index_j] * (
+                         self.alphas[alpha_index_j] - alpha_j_old)
+            if 0 < self.alphas[alpha_index_i] and self.alphas[alpha_index_i] < self.C:
+                self.b = b1
+            elif 0 < self.alphas[alpha_index_j] and self.alphas[alpha_index_j] < self.C:
+                self.b = b2
+            else:
+                self.b = (b1 + b2) / 2.0
+            # 9.更新error
+            self.update_error_tmp(alpha_index_j)
+            self.update_error_tmp(alpha_index_i)
+            return 1
         else:
-            L = max(0, oS.alphas[j] + oS.alphas[i] - oS.C)
-            H = min(oS.C, oS.alphas[j] + oS.alphas[i])
-        if L==H:
-            print("L==H")
             return 0
-        eta = 2.0 * oS.K[i,j] - oS.K[i,i] - oS.K[j,j] #参考《统计学习方法》p127公式7.107
-        if eta >= 0:
-            print("eta>=0")
-            return 0
-        oS.alphas[j] -= oS.labelMat[j]*(Ei - Ej)/eta #参考《统计学习方法》p127公式7.106
-        oS.alphas[j] = clipAlpha(oS.alphas[j],H,L) #参考《统计学习方法》p127公式7.108
-        updateEk(oS, j)
-        if (abs(oS.alphas[j] - alphaJold) < oS.tol): #alpha变化大小阀值（自己设定）
-            print("j not moving enough")
-            return 0
-        oS.alphas[i] += oS.labelMat[j]*oS.labelMat[i]*(alphaJold - oS.alphas[j])#参考《统计学习方法》p127公式7.109
-        updateEk(oS, i) #更新数据
-        #以下求解b的过程，参考《统计学习方法》p129公式7.114-7.116
-        b1 = oS.b - Ei- oS.labelMat[i]*(oS.alphas[i]-alphaIold)*oS.K[i,i] - oS.labelMat[j]*(oS.alphas[j]-alphaJold)*oS.K[i,j]
-        b2 = oS.b - Ej- oS.labelMat[i]*(oS.alphas[i]-alphaIold)*oS.K[i,j]- oS.labelMat[j]*(oS.alphas[j]-alphaJold)*oS.K[j,j]
-        if (0 < oS.alphas[i]<oS.C):
-            oS.b = b1
-        elif (0 < oS.alphas[j]<oS.C):
-            oS.b = b2
-        else:
-            oS.b = (b1 + b2)/2.0
-        return 1
-    else:
-        return 0
+
+    def fit(self, X, y):
+        #  还是有问题 待修改
+        self.n_samples, n = np.shape(X)
+        self.X = np.mat(X)
+        self.y = np.mat(y)
+        self.alphas = np.mat(np.zeros(self.n_samples)) # 初始化alpha [0,0,....,0]
+        self.error_tmp = np.mat(np.zeros((self.n_samples, 2)))
+        #开始训练
+        entireSet = True
+        alpha_pairs_changed = 0
+        iteration = 0
+        while iteration < self._max_iter and (alpha_pairs_changed > 0 or entireSet):
+            print("\t iteration: ", iteration)
+            alpha_pairs_changed = 0
+            if entireSet:  # 对所有样本
+                for x in range(n):
+                    alpha_pairs_changed += self.choose_and_update(x)
+                iteration += 1
+            else:  # 对非边界样本
+                bound_samples = []
+                for i in range(m):
+                    if self.alphas[i, 0] > 0 and self.alphas[i, 0] < self.C:
+                        bound_samples.append(i)
+                for x in bound_samples:
+                    alpha_pairs_changed += self.choose_and_update(x)
+                iteration += 1
+            if entireSet:
+                entireSet = False
+            elif alpha_pairs_changed == 0:
+                entireSet = True
+        return self
 
 
-#SMO函数，用于快速求解出alpha
-def smoP(dataMatIn, classLabels, C, toler, maxIter,kTup=('lin', 0)): #输入参数：数据特征，数据类别，参数C，阀值toler，最大迭代次数，核函数（默认线性核）
-    oS = optStruct(mat(dataMatIn),mat(classLabels).transpose(),C,toler, kTup)
-    iter = 0
-    entireSet = True
-    alphaPairsChanged = 0
-    while (iter < maxIter) and ((alphaPairsChanged > 0) or (entireSet)):
-        alphaPairsChanged = 0
-        if entireSet:
-            for i in range(oS.m): #遍历所有数据
-                alphaPairsChanged += innerL(i,oS)
-                print("fullSet, iter: %d i:%d, pairs changed %d" % (iter,i,alphaPairsChanged)) #显示第多少次迭代，那行特征数据使alpha发生了改变，这次改变了多少次alpha
-            iter += 1
-        else:
-            nonBoundIs = nonzero((oS.alphas.A > 0) * (oS.alphas.A < C))[0]
-            for i in nonBoundIs: #遍历非边界的数据
-                alphaPairsChanged += innerL(i,oS)
-                print("non-bound, iter: %d i:%d, pairs changed %d" % (iter,i,alphaPairsChanged))
-            iter += 1
-        if entireSet:
-            entireSet = False
-        elif (alphaPairsChanged == 0):
-            entireSet = True
-        print("iteration number: %d" % iter)
-    return oS.b,oS.alphas
 
-def testRbf(data_train,data_test):
-    dataArr,labelArr = loadDataSet(data_train) #读取训练数据
-    b,alphas = smoP(dataArr, labelArr, 200, 0.0001, 10000, ('rbf', 1.3)) #通过SMO算法得到b和alpha
-    datMat=mat(dataArr)
-    labelMat = mat(labelArr).transpose()
-    svInd=nonzero(alphas)[0]  #选取不为0数据的行数（也就是支持向量）
-    sVs=datMat[svInd] #支持向量的特征数据
-    labelSV = labelMat[svInd] #支持向量的类别（1或-1）
-    print("there are %d Support Vectors" % shape(sVs)[0]) #打印出共有多少的支持向量
-    m,n = shape(datMat) #训练数据的行列数
-    errorCount = 0
-    for i in range(m):
-        kernelEval = kernelTrans(sVs,datMat[i,:],('rbf', 1.3)) #将支持向量转化为核函数
-        predict=kernelEval.T * multiply(labelSV,alphas[svInd]) + b  #这一行的预测结果（代码来源于《统计学习方法》p133里面最后用于预测的公式）注意最后确定的分离平面只有那些支持向量决定。
-        if sign(predict)!=sign(labelArr[i]): #sign函数 -1 if x < 0, 0 if x==0, 1 if x > 0
-            errorCount += 1
-    print("the training error rate is: %f" % (float(errorCount)/m)) #打印出错误率
-    dataArr_test,labelArr_test = loadDataSet(data_test) #读取测试数据
-    errorCount_test = 0
-    datMat_test=mat(dataArr_test)
-    labelMat = mat(labelArr_test).transpose()
-    m,n = shape(datMat_test)
-    for i in range(m): #在测试数据上检验错误率
-        kernelEval = kernelTrans(sVs,datMat_test[i,:],('rbf', 1.3))
-        predict=kernelEval.T * multiply(labelSV,alphas[svInd]) + b
-        if sign(predict)!=sign(labelArr_test[i]):
-            errorCount_test += 1
-    print("the test error rate is: %f" % (float(errorCount_test)/m))
 
-#主程序
-def main():
-    filename_traindata='C:\\Users\\Administrator\\Desktop\\data\\traindata.txt'
-    filename_testdata='C:\\Users\\Administrator\\Desktop\\data\\testdata.txt'
-    testRbf(filename_traindata,filename_testdata)
+#####################################################
 
-if __name__=='__main__':
-    main()
