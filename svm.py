@@ -12,6 +12,7 @@ class SVC(object):
     kernel: 核函数（linear：线性核, rbf:高斯核) [Kernel, param]
     tol: 停止迭代的最小阈值
     max_iter: max_iter
+    SMO优化算法
     '''
 
     def __init__(self, C=1.0, kernel=['rbf', 1], tol=0.001, max_iter=500):

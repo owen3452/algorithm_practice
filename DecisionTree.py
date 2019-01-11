@@ -17,19 +17,21 @@ class DecisionTree(object):
     type: distrete, continuous
     criterion: gini,entropy
     splitter: best, random
+    max_depth: 最大深度
     min_impurity_decrease： 熵or基尼系数减少的阈值，小于阈值不分裂
     min_impurity_split： 节点熵or基尼系数的阈值，小于阈值不分裂
     min_samples_split： 节点样本数的阈值，小于阈值不分裂
     """
 
     def __init__(self, type='distrete', criterion='gini', splitter='best', min_impurity_decrease=0.0,
-                 min_impurity_split=0.0, min_samples_split=1.0):
+                 min_impurity_split=0.0, min_samples_split=1.0, max_depth=None):
         self._type = type
         self._criterion = criterion
         self._splitter = splitter
         self._min_impurity_decrease = min_impurity_decrease
         self._min_impurity_split = min_impurity_split
         self._min_samples_split = min_samples_split
+        self._max_depth = max_depth
 
     class TreeNode(object):
         """
@@ -192,6 +194,7 @@ class DecisionTree(object):
             # 样本已分净
             result = list_distinct(tree_node.labels)[0]
         elif len(tree_node.features.keys())==len(tree_node.has_calc_col) \
+             or len(tree_node.has_calc_col)==self._max_depth \
              or tree_node.impurity <= self._min_impurity_split  \
              or tree_node.impurity - tree_node.next_impurity <= self._min_impurity_split \
              or len(tree_node.labels) <= (n if n >= 1 else n * self._all_data_cnt):
