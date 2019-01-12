@@ -24,7 +24,7 @@ class DecisionTree(object):
     """
 
     def __init__(self, type='distrete', criterion='gini', splitter='best', min_impurity_decrease=0.0,
-                 min_impurity_split=0.0, min_samples_split=1.0, max_depth=None):
+                 min_impurity_split=0.0, min_samples_split=1.0, max_depth=None, Columns=[]):
         self._type = type
         self._criterion = criterion
         self._splitter = splitter
@@ -32,6 +32,7 @@ class DecisionTree(object):
         self._min_impurity_split = min_impurity_split
         self._min_samples_split = min_samples_split
         self._max_depth = max_depth
+        self._Columns = Columns
 
     class TreeNode(object):
         """
@@ -230,6 +231,9 @@ class DecisionTree(object):
                 self.build_tree(temp_tree)
 
     def fit(self, X, y):
+        m, n = np.shape(X)
+        self._Columns = [str(col) for col in range(n)] if self._Columns == [] else self._Columns
+        X = {col: list(x) for col, x in zip(self._Columns, X.T)}
         self._all_data_cnt = len(y)
         #self._root_node = self.TreeNode(features=X, labels=y)
         (impurity, best_feature, next_impurity, features, labels) = \
@@ -239,7 +243,7 @@ class DecisionTree(object):
         self._tree_node.is_leaf = self.is_leaf_node(self._tree_node)
         self.build_tree(self._tree_node)
 
-    def predict(self, X, tree_node=None):
+    def predict_one(self, X, tree_node=None):
         if tree_node==None:
             tree_node = self._tree_node
         if tree_node.is_leaf!=None:
@@ -248,7 +252,14 @@ class DecisionTree(object):
             for condition in tree_node.next_node.keys():
                 if eval(str(X[tree_node.best_feature][0]) + condition):
 #                     print(tree_node.best_feature, str(X[tree_node.best_feature][0]) + condition)
-                    return self.predict(X, tree_node.next_node[condition])
+                    return self.predict_one(X, tree_node.next_node[condition])
+
+    def predict(self, X):
+        result = []
+        for x in X:
+            x = {col: [x] for col, x in zip(self._Columns, x.T)}
+            result.append(self.predict_one(x))
+        return np.array(result)
 
 
 
@@ -280,7 +291,8 @@ class DecisionTree(object):
 # y_result = list(df.iloc[[99],[4]].to_dict(orient= 'list').values())[0]
 #
 # test.fit(X,y)
-# #test.predict(X_test)
+# #test.predict_one(X_test)
+# #1
 # test._tree_node
 #
 # ##画图

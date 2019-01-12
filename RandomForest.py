@@ -19,7 +19,7 @@ class RandomForestClassifier(object):
     min_impurity_split： 节点熵or基尼系数的阈值，小于阈值不分裂
     min_samples_split： 节点样本数的阈值，小于阈值不分裂
     '''
-    def __init__(self, 	n_estimators=10, criterion='gini', max_depth=None, type='distrete', splitter='best',
+    def __init__(self, n_estimators=10, criterion='gini', max_depth=None, type='distrete', splitter='best',
                  min_samples_split=2,  min_impurity_decrease=0.0, min_impurity_split=None,
                  bagging_fraction=1.0, feature_fraction=1.0):
         self._n_estimators = n_estimators
