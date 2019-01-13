@@ -54,7 +54,7 @@ class AdaboostingClassifier(object):
             predict_tmp = tree_tmp.predict(X)
             error_list = [1 if a != b else 0 for a, b in zip(y, predict_tmp)]
             error_rate = sum(error_list) * 1.0 / len(error_list)
-            alpha = 0.5 * np.exp(1 / error_rate - 1)
+            alpha = 0.5 * np.log(1 / error_rate - 1)
             self.model_list.append(tree_tmp)
             self.alpha_list.append(alpha)
             X, y = self.handle_weight(self, X, y, error_list)
